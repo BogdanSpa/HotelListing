@@ -1,6 +1,7 @@
 using Serilog;
 using HotelListing.Data;
 using Microsoft.EntityFrameworkCore;
+using HotelListing.Configurations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,8 @@ builder.Services.AddCors(o => {
         .AllowAnyHeader();
     });
 });
+
+builder.Services.AddAutoMapper(typeof(MapperInitializer));
 
 var connectionString = builder.Configuration.GetConnectionString("sqlconnection");
 
