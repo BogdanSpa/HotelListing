@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using HotelListing.Configurations;
 using HotelListing.IRepository;
 using HotelListing.Repository;
+using Microsoft.AspNetCore.Identity;
+using HotelListing.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +18,11 @@ var logger = new LoggerConfiguration()
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog(logger);
 
+builder.Services.AddAuthentication();
 
+builder.Services.ConfigureIdentity();
+
+builder.Services.ConfigureJWT(builder.Configuration);
 
 builder.Services.AddCors(o => {
     o.AddPolicy("AllowAll", builder =>
@@ -27,14 +33,20 @@ builder.Services.AddCors(o => {
     });
 });
 
+
+
 builder.Services.AddAutoMapper(typeof(MapperInitializer));
 
 var connectionString = builder.Configuration.GetConnectionString("sqlconnection");
 
+builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IAuthManager, AuthManager>();
+
 builder.Services.AddDbContext<DatabaseContext>(options =>
         options.UseSqlServer(connectionString));
 
-builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
+
+
 builder.Services.AddControllers().AddNewtonsoftJson(op =>
         op.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore)
            .AddNewtonsoftJson(op => op.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore);
@@ -58,6 +70,7 @@ try
     app.UseCors("AllowAll");
     app.UseHttpsRedirection();
 
+    app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
 
