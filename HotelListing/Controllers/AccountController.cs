@@ -32,35 +32,28 @@ namespace HotelListing.Controllers
         public async Task<IActionResult> Register([FromBody] UserDTO userDTO)
         {
             _logger.LogInformation($"Registration attempt for user {userDTO.Email}");
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            try
-            {
-                var user = _mapper.Map<ApiUser>(userDTO);
-                user.UserName = userDTO.Email;
-                var result = await _userManager.CreateAsync(user, userDTO.Password);
+            var user = _mapper.Map<ApiUser>(userDTO);
+            user.UserName = userDTO.Email;
+            var result = await _userManager.CreateAsync(user, userDTO.Password);
 
-                if(!result.Succeeded)
+            if (!result.Succeeded)
+            {
+                //could be sensitive data
+                foreach (var error in result.Errors)
                 {
-                    //could be sensitive data
-                    foreach (var error in result.Errors)
-                    {
-                        ModelState.AddModelError(error.Code, error.Description);
-                    }
-                    return BadRequest(ModelState); //It might show sensitive data, did it for debugging purpose
+                    ModelState.AddModelError(error.Code, error.Description);
                 }
+                return BadRequest(ModelState); //It might show sensitive data, did it for debugging purpose
+            }
 
-                await _userManager.AddToRolesAsync(user, userDTO.Roles);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Something went wrong in the {nameof(Register)}");
-                return Problem($"Something went wrong in the {nameof(Register)}", statusCode: 500);
-            }
+            await _userManager.AddToRolesAsync(user, userDTO.Roles);
+            return Ok();
+
         }
 
         [HttpPost]
@@ -73,20 +66,14 @@ namespace HotelListing.Controllers
                 return BadRequest(ModelState);
             }
 
-            try
-            {
-                if (! await _authManager.ValidateUser(userDTO))
-                {
-                    return Unauthorized(userDTO);
-                }
 
-                return Accepted(new {Token = await _authManager.CreateToken()});
-            }
-            catch (Exception ex)
+            if (!await _authManager.ValidateUser(userDTO))
             {
-                _logger.LogError(ex, $"Something went wrong in the {nameof(Login)}");
-                return Problem($"Something went wrong in the {nameof(Login)}", statusCode: 500);
+                return Unauthorized(userDTO);
             }
+
+            return Accepted(new { Token = await _authManager.CreateToken() });
+
         }
     }
 }
